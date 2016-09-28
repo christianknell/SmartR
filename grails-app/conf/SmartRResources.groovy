@@ -57,6 +57,6 @@ modules = {
         resource url: [plugin: 'smart-r', dir: 'js/smartR/_angular/viz', file: 'd3Volcanoplot.js']
         // survival
         resource url: [plugin: 'smart-r', dir: 'js/smartR/_angular/controllers', file: 'survival.js']
-        resource url: [plugin: 'smart-r', dir: 'js/smartR/_angular/viz', file: 'd3Survival.js']
+        // resource url: [plugin: 'smart-r', dir: 'js/smartR/_angular/viz', file: 'd3Survival.js']
     }
 }
