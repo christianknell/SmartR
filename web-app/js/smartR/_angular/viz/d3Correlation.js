@@ -3,9 +3,9 @@
 'use strict';
 
 window.smartRApp.directive('correlationPlot', [
-    'smartRUtils',
-    'rServeService',
-    function(smartRUtils, rServeService) {
+	'smartRUtils',
+	'rServeService',
+	function(smartRUtils, rServeService) {
 
         return {
             restrict: 'E',
@@ -15,7 +15,6 @@ window.smartRApp.directive('correlationPlot', [
                 height: '@'
             },
             link: function (scope, element) {
-
                 /**
                  * Watch data model (which is only changed by ajax calls when we want to (re)draw everything)
                  */

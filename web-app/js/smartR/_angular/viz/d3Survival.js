@@ -1,430 +1,267 @@
 //# sourceURL=d3Survival.js
 
-window.smartRApp.directive('survivalPlot', ['smartRUtils', 'rServeService', function(smartRUtils, rServeService) {
+'use strict';
 
-    return {
-        restrict: 'E',
-        scope: {
-            data: '=',
-            width: '@',
-            height: '@'
-        },
-        link: function (scope, element) {
-
-            /**
-             * Watch data model (which is only changed by ajax calls when we want to (re)draw everything)
-             */
-            scope.$watch('data', function() {
-                $(element[0]).empty();
-                if (! $.isEmptyObject(scope.data)) {
-                    createSurvivalViz(scope, element[0]);
-                }
-            });
-        }
-    };
-
-    function createSurvivalViz(scope, root) {
-        var animationDuration = 500;
-        var bins = 10;
-        var w = scope.width;
-        var h = scope.height;
-        var margin = {top: 20, right: 20, bottom: h / 4, left: w / 4};
-        var width = w * 3 / 4 - margin.left - margin.right;
-        var height = h * 3 / 4 - margin.top - margin.bottom;
-        var bottomHistHeight = margin.bottom;
-        var leftHistHeight = margin.left;
-        var colors = ['#33FF33', '#3399FF', '#CC9900', '#CC99FF', '#FFFF00', 'blue'];
-        var x = d3.scale.linear()
-            .domain(d3.extent(scope.data.points, function(d) { return d.x; }))
-            .range([0, width]);
-        var y = d3.scale.linear()
-            .domain(d3.extent(scope.data.points, function(d) { return d.y; }))
-            .range([height, 0]);
-
-        var annotations = scope.data.annotations.sort();
-        var xArrLabel = scope.data.xArrLabel[0];
-        var yArrLabel = scope.data.yArrLabel[0];
-
-        var correlation,
-            pvalue,
-            regLineSlope,
-            regLineYIntercept,
-            patientIDs,
-            points,
-            method,
-            minX,
-            maxX,
-            minY,
-            maxY;
-        function setData(data) {
-            correlation = data.correlation[0];
-            pvalue = data.pvalue[0];
-            regLineSlope = data.regLineSlope[0];
-            regLineYIntercept = data.regLineYIntercept[0];
-            method = data.method[0];
-            patientIDs = data.patientIDs;
-            points = data.points;
-            minX = data.points.min(function(d) { return d.x });
-            maxX = data.points.max(function(d) { return d.x });
-            minY = data.points.min(function(d) { return d.y });
-            maxY = data.points.max(function(d) { return d.y });
-        }
-
-        setData(scope.data);
-
-        function updateStatistics(patientIDs, scatterUpdate, init) {
-            scatterUpdate = scatterUpdate === undefined ? false : scatterUpdate;
-            init = init === undefined ? false : init;
-            var arguments = { selectedPatientIDs: patientIDs };
-
-            rServeService.startScriptExecution({
-                taskType: 'run',
-                arguments: arguments
-            }).then(
-                function (response) {
-                    var results = JSON.parse(response.result.artifacts.value);
-                    if (init) {
-                        scope.data = results;
-                    } else {
-                        setData(results);
-                        if (scatterUpdate) updateScatterplot();
-                        updateRegressionLine();
-                        updateLegend();
-                        updateHistogram();
-                    }
-                },
-                function (response) {
-                    console.error('  Failure: ' + response.statusText);
-                }
-            );
-        }
-
-        var svg = d3.select(root).append('svg')
-            .attr('width', width + margin.left + margin.right)
-            .attr('height', height + margin.top + margin.bottom)
-            .append('g')
-            .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
-            .on('contextmenu', function() {
-                d3.event.preventDefault();
-                contextMenu
-                    .style('visibility', 'visible')
-                    .style('left', smartRUtils.mouseX(root) + 'px')
-                    .style('top', smartRUtils.mouseY(root) + 'px')
-            });
-
-        var tooltip = d3.select(root).append('div')
-            .attr('class', 'tooltip')
-            .style('visibility', 'hidden');
-
-        function dragmove() {
-            legend
-                .style('left', smartRUtils.mouseX(root) + 'px')
-                .style('top', smartRUtils.mouseY(root) + 'px');
-        }
-
-        var drag = d3.behavior.drag()
-            .on('drag', dragmove);
-
-        var legend = d3.select(root).append('div')
-            .attr('class', 'legend')
-            .style('left', 0)
-            .style('top', $('#scatterplot').offsetTop + 'px')
-            .call(drag);
-
-        svg.append('g')
-            .attr('class', 'x axis')
-            .attr('transform', 'translate(0, 0)')
-            .call(d3.svg.axis()
-                .scale(x)
-                .ticks(10)
-                .tickFormat('')
-                .innerTickSize(height)
-                .orient('bottom'));
-
-        svg.append('text')
-            .attr('class', 'axisLabels')
-            .attr('transform', 'translate(' + width / 2 + ',' + - margin.top / 2 + ')')
-            .text(smartRUtils.shortenConcept(xArrLabel));
-
-        svg.append('g')
-            .attr('class', 'y axis')
-            .attr('transform', 'translate(' + width + ',' + 0 + ')')
-            .call(d3.svg.axis()
-                .scale(y)
-                .ticks(10)
-                .tickFormat('')
-                .innerTickSize(width)
-                .orient('left'));
-
-        svg.append('text')
-            .attr('class', 'axisLabels')
-            .attr('transform', 'translate('  + (width + margin.right / 2) + ',' + height / 2 + ')rotate(90)')
-            .text(smartRUtils.shortenConcept(yArrLabel));
-
-        svg.append('g')
-            .attr('class', 'x axis')
-            .attr('transform', 'translate(' + 0 + ',' + height + ')')
-            .call(d3.svg.axis()
-                .scale(x)
-                .orient('top'));
-
-        svg.append('g')
-            .attr('class', 'y axis')
-            .attr('transform', 'translate(' + 0 + ',' + 0 + ')')
-            .call(d3.svg.axis()
-                .scale(y)
-                .orient('right'));
-
-        function excludeSelection() {
-            var remainingPatientIDs = d3.selectAll('.point:not(.selected)').map(function(d) { return d.patientID; });
-            updateStatistics(remainingPatientIDs, true);
-        }
-
-        function zoomSelection() {
-            if (d3.selectAll('.point.selected').size() < 2) {
-                alert('Please select at least two elements before zooming!');
-                return;
-            }
-            var selectedPatientIDs = d3.selectAll('.point.selected').map(function(d) { return d.patientID; });
-            updateStatistics(selectedPatientIDs, false, true);
-        }
-
-        var ctxHtml = '<input id="zoomButton" class="mybutton" type="button" value="Zoom"/><br/> \
-            <input id="excludeButton" class="mybutton" type="button" value="Exclude"/><br/> \
-            <input id="resetButton" class="mybutton" type="button" value="Reset"/>';
-
-        var contextMenu = d3.select(root).append('div')
-            .attr('class', 'contextMenu')
-            .style('visibility', 'hidden')
-            .html(ctxHtml);
-        $('#zoomButton').on('click', function() {
-            contextMenu.style('visibility', 'hidden');
-            zoomSelection();
-        });
-        $('#excludeButton').on('click', function() {
-            contextMenu.style('visibility', 'hidden');
-            excludeSelection();
-        });
-        $('#resetButton').on('click', function() {
-            contextMenu.style('visibility', 'hidden');
-            reset();
-        });
-
-        function updateSelection() {
-            var extent = brush.extent();
-            var x0 = x.invert(extent[0][0]);
-            var x1 = x.invert(extent[1][0]);
-            var y0 = y.invert(extent[0][1]);
-            var y1 = y.invert(extent[1][1]);
-            svg.selectAll('.point')
-                .classed('selected', false)
-                .style('fill', function(d) { return getColor(d.annotation); })
-                .style('stroke', 'white')
-                .filter(function(d) {
-                    return x0 <= d.x && d.x <= x1 && y1 <= d.y && d.y <= y0;
-                })
-                .classed('selected', true)
-                .style('fill', 'white')
-                .style('stroke', function(d) { return getColor(d.annotation); });
-        }
-
-        var brush = d3.svg.brush()
-            .x(d3.scale.identity().domain([0, width]))
-            .y(d3.scale.identity().domain([0, height]))
-            .on('brushend', function() {
-                contextMenu
-                    .style('visibility', 'hidden')
-                    .style('top', -100 + 'px');
-                updateSelection();
-                var selectedPatientIDs = d3.selectAll('.point.selected').map(function(d) { return d.patientID; });
-                updateStatistics(selectedPatientIDs);
-            });
-
-        svg.append('g')
-            .attr('class', 'brush')
-            .on('mousedown', function() {
-                return d3.event.button === 2 ? d3.event.stopImmediatePropagation() : null;
-            })
-            .call(brush);
-
-        function getColor(annotation) {
-            return annotation ? colors[annotations.indexOf(annotation)] : 'black';
-        }
-
-        function updateScatterplot() {
-
-            var point = svg.selectAll('.point')
-                .data(points, function(d) { return d.patientID; });
-
-            point.enter()
-                .append('circle')
-                .attr('class', 'point')
-                .attr('cx', function(d) { return x(d.x); })
-                .attr('cy', function(d) { return y(d.y); })
-                .attr('r', 5)
-                .style('fill', function(d) { return getColor(d.annotation); })
-                .on('mouseover', function(d) {
-                    d3.select(this).style('fill', '#FF0000');
-                    tooltip
-                        .style('left', 10 + smartRUtils.mouseX(root) + 'px')
-                        .style('top', 10 + smartRUtils.mouseY(root) + 'px')
-                        .style('visibility', 'visible')
-                        .html(smartRUtils.shortenConcept(xArrLabel) + ': ' + d.x + '<br/>' +
-                            smartRUtils.shortenConcept(yArrLabel) + ': ' + d.y + '<br/>' +
-                            'Patient ID: ' + d.patientID + '<br/>' +
-                            (d.annotation ? 'Tag: ' + d.annotation : ''));
-                })
-                .on('mouseout', function() {
-                    var p = d3.select(this);
-                    p.style('fill', function(d) { return p.classed('selected') ? '#FFFFFF' : getColor(d.annotation) });
-                    tooltip.style('visibility', 'hidden');
-                });
-
-            point.exit()
-                .classed('selected', false)
-                .transition()
-                .duration(animationDuration)
-                .attr('r', 0)
-                .remove();
-        }
-
-        function updateHistogram() {
-            var bottomHistData = d3.layout.histogram()
-                .bins(bins)(points.map(function(d) { return d.x; }));
-            var leftHistData = d3.layout.histogram()
-                .bins(bins)(points.map(function(d) { return d.y; }));
-
-            var bottomHistHeightScale = d3.scale.linear()
-                .domain([0, bottomHistData.max(function(d) { return d.y; })])
-                .range([1, bottomHistHeight]);
-            var leftHistHeightScale = d3.scale.linear()
-                .domain([0, leftHistData.max(function(d) { return d.y; })])
-                .range([2, leftHistHeight]);
-
-            var bottomHistGroup = svg.selectAll('.bar.bottom')
-                .data(Array(bins).fill().map(function(_, i) { return i; }));
-            var bottomHistGroupEnter = bottomHistGroup.enter()
-                .append('g')
-                .attr('class', 'bar bottom');
-            var bottomHistGroupExit = bottomHistGroup.exit();
-
-            bottomHistGroupEnter.append('rect')
-                .attr('y', height + 1);
-            bottomHistGroup.selectAll('rect')
-                .transition()
-                .delay(function(d) { return d * 25; })
-                .duration(animationDuration)
-                .attr('x', function(d) { return x(bottomHistData[d].x); })
-                .attr('width', function() { return (x(maxX) - x(minX)) / bins; })
-                .attr('height', function(d) { return bottomHistHeightScale(bottomHistData[d].y) - 1; });
-            bottomHistGroupExit.selectAll('rect')
-                .transition()
-                .duration(animationDuration)
-                .attr('height', 0);
-
-            bottomHistGroupEnter.append('text')
-                .attr('dy', '.35em')
-                .attr('text-anchor', 'middle');
-            bottomHistGroup.selectAll('text')
-                .text(function(d) { return bottomHistData[d].y || ''; })
-                .transition()
-                .delay(function(d) { return d * 25; })
-                .duration(animationDuration)
-                .attr('x', function(d) { return x(bottomHistData[d].x) + (x(maxX) - x(minX)) / bins / 2; })
-                .attr('y', function(d) { return height + bottomHistHeightScale(bottomHistData[d].y) - 10; });
-            bottomHistGroupExit.selectAll('text')
-                .text('');
-
-            var leftHistGroup = svg.selectAll('.bar.left')
-                .data(Array(bins).fill().map(function(_, i) { return i; }));
-            var leftHistGroupEnter = leftHistGroup.enter()
-                .append('g')
-                .attr('class', 'bar left');
-            var leftHistGroupExit = leftHistGroup.exit();
-
-            leftHistGroupEnter.append('rect');
-            leftHistGroup.selectAll('rect')
-                .transition()
-                .delay(function(d) { return d * 25; })
-                .duration(animationDuration)
-                .attr('x', function(d) { return - leftHistHeightScale(leftHistData[d].y) + 1; })
-                .attr('y', function(d) { return y(leftHistData[d].x) - (y(minY) - y(maxY))/ bins; })
-                .attr('width', function(d) { return leftHistHeightScale(leftHistData[d].y) - 2; })
-                .attr('height', function() { return (y(minY) - y(maxY))/ bins; });
-            leftHistGroupExit.selectAll('rect')
-                .transition()
-                .duration(animationDuration)
-                .attr('height', 0);
-
-            leftHistGroupEnter.append('text')
-                .attr('dy', '.35em')
-                .attr('text-anchor', 'middle');
-            leftHistGroup.selectAll('text')
-                .text(function(d) { return leftHistData[d].y || ''; })
-                .transition()
-                .delay(function(d) { return d * 25; })
-                .duration(animationDuration)
-                .attr('x', function(d) { return - leftHistHeightScale(leftHistData[d].y) + 10; })
-                .attr('y', function(d) { return y(leftHistData[d].x) - (y(minY) - y(maxY))/ bins / 2; });
-            leftHistGroupExit.selectAll('text')
-                .text('');
-        }
-
-        function updateLegend() {
-            var html = 'Correlation Coefficient: ' + correlation + '<br/>' +
-                'p-value: ' + pvalue + '<br/>' +
-                'Method: ' + method + '<br/><br/>' +
-                'Selected: ' + d3.selectAll('.point.selected').size() || d3.selectAll('.point').size() + '<br/>' +
-                'Displayed: ' + d3.selectAll('.point').size() + '<br/><br/>';
-
-            html = html + '<p style="background: #000000; color:#FFFFFF">Default</p>';
-
-            annotations.forEach(function(annotation) {
-                html += '<p style=background:' + getColor(annotation) + '; color:#FFFFFF>' + annotation + '</p>';
-            });
-
-            legend.html(html);
-        }
-
-        function updateRegressionLine() {
-            var regressionLine = svg.selectAll('.regressionLine')
-                .data(regLineSlope === 'NA' ? [] : [0], function(d) { return d });
-            regressionLine.enter()
-                .append('line')
-                .attr('class', 'regressionLine')
-                .on('mouseover', function () {
-                    d3.select(this).attr('stroke', 'red');
-                    tooltip
-                        .style('visibility', 'visible')
-                        .html('slope: ' + regLineSlope + '<br/>intercept: ' + regLineYIntercept)
-                        .style('left', smartRUtils.mouseX(root) + 'px')
-                        .style('top', smartRUtils.mouseY(root) + 'px');
-                })
-                .on('mouseout', function () {
-                    d3.select(this).attr('stroke', 'orange');
-                    tooltip.style('visibility', 'hidden');
-                });
-
-            regressionLine.transition()
-                .duration(animationDuration)
-                .attr('x1', x(minX))
-                .attr('y1', y(regLineYIntercept + regLineSlope * minX))
-                .attr('x2', x(maxX))
-                .attr('y2', y(regLineYIntercept + regLineSlope * maxX));
-
-            regressionLine.exit()
-                .remove();
-        }
-
-        function reset() {
-            updateStatistics([], false, true);
-        }
-
-        updateScatterplot();
-        updateHistogram();
-        updateRegressionLine();
-        updateLegend();
-
+window.smartRApp.directive('survivalPlot', [
+	'smartRUtils', 
+	'rServeService', 
+	function(smartRUtils, rServeService) {
+		
+		return {
+			restrict: 'E',
+			scope: {
+				data: '=',
+				width: '@',
+				height: '@'
+			},
+			link: function (scope, element) {
+				/**
+				 * Watch data model (which is only changed by ajax calls when we want to (re)draw everything)
+				 */
+				scope.$watch('data', function() {
+					$(element[0]).empty();
+					if (! $.isEmptyObject(scope.data)) {
+						smartRUtils.prepareWindowSize(scope.width, scope.height);
+						createSurvivalViz(scope, element[0]);
+					}
+				});
+			}
+		};
+		
+		function createSurvivalViz(scope, root) {
+			
+			/* Global Settings */
+			var scopeWidth = parseInt(scope.width); // 1100
+			var scopeHeight = parseInt(scope.height); // 700
+			var margin = {
+				top: 20,
+				right: 20,
+				bottom: 20,
+				left: 20
+			};
+			var width = scopeWidth - 2*margin.left - 2*margin.right; // 1020
+			var height = scopeHeight - 2*margin.top - 2*margin.bottom; // 620
+			
+			/* Design */
+			var colors = [
+				'red',
+				'green',
+				'blue',
+				'orange',
+				'black',
+				'blue',
+				'yellow',
+				'purple'
+			];
+			
+			/* Data */
+			var max = scope.data.maxTime;
+			var min= 10000000000000000000;
+			// var xLabel = smartRUtils.shortenConcept(scope.data.xLabel);
+			var xLabel = scope.data.xLabel;
+			var givenData = {
+				survival_data: [
+					[
+						{t: 0, d: 0, n: 20},
+						{t: 11.267, d: 1, n: 20},
+						{t: 31.2, d: 1, n: 19},
+						{t: 33.167, d: 0, n: 18},
+						{t: 33.367, d: 1, n: 17},
+						{t: 35.667, d: 1, n: 16},
+						{t: 39.033, d: 0, n: 15},
+						{t: 39.3, d: 1, n: 14},
+						{t: 40.067, d: 1, n: 13},
+						{t: 53.867, d: 0, n: 12},
+						{t: 56.7, d: 1, n: 11},
+						{t: 56.9, d: 0, n: 10},
+						{t: 57.7, d: 1, n: 9},
+						{t: 59.4, d: 1, n: 8},
+						{t: 71.3, d: 1, n: 7},
+						{t: 73.333, d: 1, n: 6},
+						{t: 81.967, d: 0, n: 5},
+						{t: 82.367, d: 0, n: 4},
+						{t: 84.867, d: 0, n: 3},
+						{t: 98.667, d: 0, n: 2},
+						{t: 125.9, d: 0, n: 1}
+					],
+					[
+						{t: 0, d: 0, n: 6},
+						{t: 5.767, d: 1, n: 6},
+						{t: 60.733, d: 0, n: 5},
+						{t: 105.9, d: 1, n: 4},
+						{t: 110.067, d: 1, n: 3},
+						{t: 117.367, d: 1, n: 2},
+						{t: 287.967, d: 0, n: 1}
+					],
+					[
+						{t: 0, d: 0, n: 11},
+						{t: 12.7, d: 1, n: 11},
+						{t: 15.4667, d: 1, n: 10},
+						{t: 18.8667, d: 1, n: 9},
+						{t: 33.5333, d: 0, n: 8},
+						{t: 35.4333, d: 0, n: 6},
+						{t: 45.2333, d: 1, n: 5},
+						{t: 48.4333, d: 1, n: 4},
+						{t: 48.8333, d: 0, n: 3},
+						{t: 49.6333, d: 1, n: 2},
+						{t: 66.9667, d: 0, n: 1}
+					],
+					[
+						{t: 0, d: 0, n: 59},
+						{t: 5.7, d: 1, n: 59},
+						{t: 6.533, d: 1, n: 58},
+						{t: 7.2, d: 1, n: 57},
+						{t: 8.7, d: 1, n: 56},
+						{t: 10.267, d: 0, n: 55},
+						{t: 10.533, d: 0, n: 54},
+						{t: 11.9, d: 1, n: 53},
+						{t: 12.167, d: 1, n: 52},
+						{t: 12.467, d: 0, n: 51},
+						{t: 12.9, d: 1, n: 50},
+						{t: 13.1, d: 1, n: 49},
+						{t: 15.1, d: 1, n: 48},
+						{t: 15.167, d: 1, n: 47},
+						{t: 16.2, d: 1, n: 46},
+						{t: 17.167, d: 1, n: 45},
+						{t: 19.8, d: 1, n: 44},
+						{t: 20.433, d: 1, n: 43},
+						{t: 21, d: 1, n: 42},
+						{t: 22.3, d: 1, n: 41},
+						{t: 26.167, d: 1, n: 40},
+						{t: 26.6, d: 1, n: 39},
+						{t: 28.1, d: 1, n: 38},
+						{t: 29.8, d: 1, n: 37},
+						{t: 30.6, d: 1, n: 36},
+						{t: 31.033, d: 1, n: 35},
+						{t: 32.4, d: 1, n: 34},
+						{t: 32.433, d: 1, n: 33},
+						{t: 32.633, d: 1, n: 32},
+						{t: 36.367, d: 1, n: 31},
+						{t: 38.967, d: 1, n: 30},
+						{t: 41.467, d: 1, n: 29},
+						{t: 42.833, d: 1, n: 28},
+						{t: 44.667, d: 1, n: 27},
+						{t: 44.833, d: 1, n: 26},
+						{t: 47.667, d: 0, n: 25},
+						{t: 50.333, d: 1, n: 24},
+						{t: 50.633, d: 1, n: 23},
+						{t: 55.533, d: 1, n: 22},
+						{t: 57.7, d: 1, n: 21},
+						{t: 61.833, d: 1, n: 20},
+						{t: 63.367, d: 1, n: 19},
+						{t: 66.667, d: 1, n: 18},
+						{t: 78.633, d: 1, n: 17},
+						{t: 85.467, d: 1, n: 16},
+						{t: 85.967, d: 1, n: 15},
+						{t: 98.267, d: 1, n: 14},
+						{t: 105.867, d: 0, n: 13},
+						{t: 109.4, d: 1, n: 12},
+						{t: 116.2, d: 0, n: 11},
+						{t: 116.267, d: 1, n: 10},
+						{t: 136.133, d: 0, n: 9},
+						{t: 151.667, d: 1, n: 8},
+						{t: 152.1, d: 0, n: 7},
+						{t: 167.367, d: 1, n: 6},
+						{t: 192.5, d: 1, n: 5},
+						{t: 193.8, d: 1, n: 4},
+						{t: 195.6, d: 0, n: 3},
+						{t: 241.967, d: 1, n: 2},
+						{t: 279.1, d: 1, n: 1}
+					]
+				]
+			};
+			
+			/* Computed Data progression, survival, prob, censored  */
+			for(var a=0; a<givenData.survival_data.length; a++){
+				for (var b=0; b<givenData.survival_data[a].length; b++){
+					var reed = givenData.survival_data[a][b];
+					var brad = (b>0) ? givenData.survival_data[a][b-1].n - reed.d : reed.n;
+					reed.progression = reed.d/reed.n;
+					reed.survival = 1 - reed.progression;
+					reed.prob = (b == 0) ? reed.survival : givenData.survival_data[a][b-1].prob*reed.survival;
+					max = (max < reed.t) ? reed.t : max;
+					min = (min < reed.t) ? min : reed.t;
+					reed.censored = (reed.n < brad) ? true : false;
+				}
+			}
+			
+			/* Begin d3.js */
+				
+				//Scalar functions
+				var x = d3.scale.linear().domain([min, max]).range([0, width]);
+				var y = d3.scale.linear().domain([1, 0]).range([0, height]);
+				
+				//Define axses
+				var xAxis = d3.svg.axis()
+					.scale(x)
+					.tickSize(2)
+					.tickPadding(6)
+					.orient("bottom");
+				
+				var yAxis = d3.svg.axis()
+					.scale(y)
+					.tickSize(2)
+					.tickPadding(6)
+					.orient("left");
+				
+				//This is the accessor function
+				var lineFunction = d3.svg.line()
+					.x(function(d) { return x(d.t) + 2*20; })
+					.y(function(d) { return y(d.prob); })
+					.interpolate("step-before");
+				
+				/* Drawing starts here */
+				
+					//Draw the svg container
+					var kaplan = d3.select(root).append('svg')
+							.attr('width', scopeWidth)
+							.attr('height', scopeHeight)
+							.append('g')
+							.attr('transform', 'translate(' + 50 + ',' + 0 + ')')
+					
+					/* Draw the lines */
+					for(var a=0; a < givenData.survival_data.length; a++){
+						var line = kaplan.append("path")
+						.attr("d", lineFunction(givenData.survival_data[a]))
+						.attr("stroke", colors[a])
+						.attr("stroke-width", 3)
+						.attr("fill", "none")
+						.attr("opacity", 0.7);
+					}
+					
+					//Draw the x-axis
+					var theXAxis = kaplan.append("g")
+						.attr("class", "x axis")
+						.attr('transform', 'translate(' + 0 + ',' + (height + margin.bottom) + ')')
+						.call(xAxis);
+						
+					// Add the text label for the x axis
+					var theXLabel = kaplan.append("text")
+						.attr('class', 'axisLabels')
+						.attr("transform", "translate(" + (width / 2) + " ," + (scopeHeight-margin.bottom) + ")")
+						.text(xLabel);
+					
+					//Draw the y-axis
+					var theYAxis = kaplan.append("g")
+						.attr("class", "y axis")
+						.attr('transform', 'translate(' + 0 + ',' + margin.top + ')')
+						.call(yAxis);
+						
+					// Add the text label for the Y axis
+					var theYLabel = kaplan.append("text")
+						.attr('class', 'axisLabels')
+						.attr("transform", "rotate(-90)")
+						.attr("y", -50)
+						.attr("x",0 - (height / 2))
+						.attr("dy", "1em")
+						.text("Fraction of Patients");
+				
+				/* Drawing ends here */
+				
+			/* End d3.js */
+			
+		}
+	
     }
-
-}]);
+	
+]);

@@ -34,6 +34,7 @@ window.smartRApp.directive('boxplot', [
     };
 
     function createBoxplot(scope, root) {
+		
         var concept = '',
             globalMin = Number.MIN_VALUE,
             globalMax = Number.MAX_VALUE,

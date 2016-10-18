@@ -1,6 +1,6 @@
 
 main <- function(excludedPatientIDs = integer(), useLog=FALSE) {
-
+	
     output <- list()
     output$useLog <- useLog
     output$concept <- fetch_params$ontologyTerms$datapoints_n0$fullName

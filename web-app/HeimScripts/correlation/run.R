@@ -1,9 +1,13 @@
 library(reshape2)
 
 main <- function(method = "pearson", transformation = "raw", selectedPatientIDs = integer()) {
+	
+	log <- file("survivalRscript.log")
 
     df1 <- loaded_variables$datapoints_n0_s1
     df2 <- loaded_variables$datapoints_n1_s1
+	
+	write.table(loaded_variables, log, append=TRUE, na="", row.names=FALSE, sep="\t")
 
     if (nrow(df1) == 0) {
         stop(paste("Variable '", fetch_params$ontologyTerms$datapoints_n0$name, "' has no patients for subset 1"), sep="")

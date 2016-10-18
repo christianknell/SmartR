@@ -1,54 +1,230 @@
-library(reshape2)
+# Load libraries
+library(survival)
 
-main <- function(method = "pearson", selectedPatientIDs = integer()) {
+# Global variables
+dummyCategory <- "NO_CATEGORY_SELECTED"
+selectedCategoryCount <- 0
+selected_categories <- c("")
 
-    time_data <- parse.input(sourceLabel="time", loaded_variables=loaded_variables, type="numerical")
-    cat_data <- parse.input(sourceLabel="category", loaded_variables=loaded_variables, type="categorical")
-
-    df <- time_data
-    df <- na.omit(df)
-
-    if (nrow(cat_data) > 0) {
-        df <- merge(df, cat_data, by="patientID")
-    } else {
-        df$annotation <- ''
-    }
-
-    colnames(df) <- c("patientID", "x", "y", "annotation")
-
-    if (length(selectedPatientIDs) > 0) {
-        df <- df[df$patientID %in% selectedPatientIDs, ]
-    }
-
-    corTest <- tryCatch({
-        cor.test(df$x, df$y, method=method)
-    }, error = function(e) {
-        ll <- list()
-        ll$estimate <- as.numeric(NA)
-        ll$p.value <- as.numeric(NA)
-        ll
-    })
-
-    regLineSlope <- corTest$estimate * (sd(df$y) / sd(df$x))
-    regLineYIntercept <- mean(df$y) - regLineSlope * mean(df$x)
-
-    output <- list(
-        correlation = corTest$estimate,
-        pvalue = corTest$p.value,
-        regLineSlope = regLineSlope,
-        regLineYIntercept = regLineYIntercept,
-        xArrLabel = fetch_params$ontologyTerms$datapoints_n0$fullName,
-        yArrLabel = fetch_params$ontologyTerms$datapoints_n1$fullName,
-        method = method,
-        patientIDs = df$patientID,
-        annotations = unique(df$annotation),
-        points = df
-    )
-    toJSON(output)
+# MAIN function which is called by SmartR automatically
+main <- function(legendPosition = "Right") {
+	
+	log <- file("survivalRscript.log")
+	
+	write.table(loaded_variables, log, row.names=FALSE, append=TRUE, sep="\t")
+	
+	getSelectedCategories()
+	
+	xLabel = fetch_params$ontologyTerms$time_n0$fullName
+	
+	# Subset 1
+	subset_1 <- getSubsetData(1)
+	survival_fit_data_1 = survfit(Surv(subset_1$TIME, subset_1$CENSOR)~1)
+	survival_data_1 <- data.frame(survival_fit_data_1$time, survival_fit_data_1$n.risk, survival_fit_data_1$n.event)
+	colnames(survival_data_1) <- c("t", "n", "d")
+	
+	# Subset 2
+	subset_2 <- getSubsetData(2)
+	if(nrow(subset_2) > 0) {
+		survival_fit_data_2 = survfit(Surv(subset_2$TIME, subset_2$CENSOR)~1)
+		survival_data_2 <- data.frame(survival_fit_data_2$time, survival_fit_data_2$n.risk, survival_fit_data_2$n.event)
+		colnames(survival_data_2) <- c("t", "n", "d")
+	} else {
+		survival_data_2 <- data.frame()
+	}
+	
+	if(nrow(survival_data_2) > 0) {
+		survival_data <- rbind(as.matrix(survival_data_1), as.matrix(survival_data_2))
+	} else {
+		survival_data <- survival_data_1
+	}
+	
+	output <- 	list(
+					survival_data = survival_data,
+					selected_categories = selected_categories,
+					selectedCategoryCount = selectedCategoryCount,
+					xLabel = xLabel,
+					maxTime = 300
+				)
+	
+	toJSON(output)
+	
 }
 
-conceptStrToFolderStr <- function(s) {
-    splitString <- strsplit(s, "")[[1]]
-    backslashs <- which(splitString == "\\")
-    substr(s, 0, tail(backslashs, 2)[1])
+# Function that extracts the name of the selected Categories
+getSelectedCategories <- function() {
+	
+	if(!is.null(loaded_variables$category_n0)) {
+		selected_categories <<- fetch_params$ontologyTerms$category_n0$fullName
+		selectedCategoryCount <<- 1
+	}
+	
+	if(!is.null(loaded_variables$category_n1)) {
+		selected_categories <<- c(selected_categories, fetch_params$ontologyTerms$category_n1$fullName)
+		selectedCategoryCount <<- selectedCategoryCount + 1
+	}
+	
+	if(!is.null(loaded_variables$category_n2)) {
+		selected_categories <<- c(selected_categories, fetch_params$ontologyTerms$category_n2$fullName)
+		selectedCategoryCount <<- selectedCategoryCount + 1
+	}
+	
+	if(!is.null(loaded_variables$category_n3)) {
+		selected_categories <<- c(selected_categories, fetch_params$ontologyTerms$category_n3$fullName)
+		selectedCategoryCount <<- selectedCategoryCount + 1
+	}
+	
+}
+
+# Function that gets the data for each subset and returns it as data.frame
+getSubsetData <- function(subsetNumber) {
+	
+	# Subset
+	subset <- data.frame()
+	
+	if(subsetNumber == 1 | subsetNumber == 2) {
+	
+		# Time (necessary) (max=1)
+		if(subsetNumber == 1) {
+			time <- loaded_variables$time_n0_s1
+			if(nrow(time) == 0) {
+				stop(paste("Variable '", fetch_params$ontologyTerms$time_n0$name, "' has no patients for subset ", subsetNumber), sep="")
+			}
+		} else {
+			if(!is.null(loaded_variables$time_n0_s2)) {
+				time <- loaded_variables$time_n0_s2
+				if(nrow(time) == 0) {
+					stop(paste("Variable '", fetch_params$ontologyTerms$time_n0$name, "' has no patients for subset ", subsetNumber), sep="")
+				}
+			} else {
+				time <- data.frame()
+			}
+		}
+		
+		if(nrow(time)!=0) {
+			
+			subset <- time
+			
+			# Category (optional) (max=4)
+			if(subsetNumber == 1) {
+				if(!is.null(loaded_variables$category_n0_s1)) {
+					category <- loaded_variables$category_n0_s1
+					selectedCategoryCount <<- 1
+					if(nrow(category) == 0) {
+						stop(paste("Variable '", fetch_params$ontologyTerms$category_n0$name, "' has no patients for subset ", subsetNumber), sep="")
+					} else {
+						subset <- merge(subset, category, by="Row.Label")
+					}
+				} else {
+					# If no category was selected, everyone is put in the same category.
+					subset <- cbind(subset, dummyCategory)
+				}
+				if(!is.null(loaded_variables$category_n1_s1)) {
+					category <- loaded_variables$category_n1_s1
+					selectedCategoryCount <<- 2
+					if(nrow(category) == 0) {
+						stop(paste("Variable '", fetch_params$ontologyTerms$category_n1$name, "' has no patients for subset ", subsetNumber), sep="")
+					} else {
+						subset <- merge(subset, category, by="Row.Label")
+					}
+				}
+				if(!is.null(loaded_variables$category_n2_s1)) {
+					category <- loaded_variables$category_n2_s1
+					selectedCategoryCount <<- 3
+					if(nrow(category) == 0) {
+						stop(paste("Variable '", fetch_params$ontologyTerms$category_n2$name, "' has no patients for subset ", subsetNumber), sep="")
+					} else {
+						subset <- merge(subset, category, by="Row.Label")
+					}
+				}
+				if(!is.null(loaded_variables$category_n3_s1)) {
+					category <- loaded_variables$category_n3_s1
+					selectedCategoryCount <<- 4
+					if(nrow(category) == 0) {
+						stop(paste("Variable '", fetch_params$ontologyTerms$category_n3$name, "' has no patients for subset ", subsetNumber), sep="")
+					} else {
+						subset <- merge(subset, category, by="Row.Label")
+					}
+				}
+			} else {
+				if(!is.null(loaded_variables$category_n0_s2)) {
+					category <- loaded_variables$category_n0_s2
+					selectedCategoryCount <<- 1
+					if(nrow(category) == 0) {
+						stop(paste("Variable '", fetch_params$ontologyTerms$category_n0$name, "' has no patients for subset ", subsetNumber), sep="")
+					} else {
+						subset <- merge(subset, category, by="Row.Label")
+					}
+				} else {
+					#If no category was selected, everyone is put in the same category.
+					subset <- cbind(subset, dummyCategory)
+				}
+				if(!is.null(loaded_variables$category_n1_s2)) {
+					category <- loaded_variables$category_n1_s2
+					selectedCategoryCount <<- 2
+					if(nrow(category) == 0) {
+						stop(paste("Variable '", fetch_params$ontologyTerms$category_n1$name, "' has no patients for subset ", subsetNumber), sep="")
+					} else {
+						subset <- merge(subset, category, by="Row.Label")
+					}
+				}
+				if(!is.null(loaded_variables$category_n2_s2)) {
+					category <- loaded_variables$category_n2_s2
+					selectedCategoryCount <<- 3
+					if(nrow(category) == 0) {
+						stop(paste("Variable '", fetch_params$ontologyTerms$category_n2$name, "' has no patients for subset ", subsetNumber), sep="")
+					} else {
+						subset <- merge(subset, category, by="Row.Label")
+					}
+				}
+				if(!is.null(loaded_variables$category_n3_s2)) {
+					category <- loaded_variables$category_n3_s2
+					selectedCategoryCount <<- 4
+					if(nrow(category) == 0) {
+						stop(paste("Variable '", fetch_params$ontologyTerms$category_n3$name, "' has no patients for subset ", subsetNumber), sep="")
+					} else {
+						subset <- merge(subset, category, by="Row.Label")
+					}
+				}
+			}
+			
+			# Censoring (optional) (max=1)
+			if(subsetNumber == 1) {
+				if(!is.null(loaded_variables$censoring_n0_s1)) {
+					censoring <- loaded_variables$censoring_n0_s1
+					censoring[censoring == ""] <- 0
+					if(nrow(censoring) == 0) {
+						stop(paste("Variable '", fetch_params$ontologyTerms$censoring_n0$name, "' has no patients for subset ", subsetNumber), sep="")
+					} else {
+						subset <- merge(subset, censoring, by="Row.Label")
+					}
+				} else {
+					#If no event was selected, we consider everyone to have had the event.
+					subset <- cbind(subset, 1)
+				}
+				colnames(subset)[ncol(subset)] <- "CENSOR"
+			} else {
+				if(!is.null(loaded_variables$censoring_n0_s2)) {
+					censoring <- loaded_variables$censoring_n0_s2
+					censoring[censoring == ""] <- 0
+					if(nrow(censoring) == 0) {
+						stop(paste("Variable '", fetch_params$ontologyTerms$censoring_n0$name, "' has no patients for subset ", subsetNumber), sep="")
+					} else {
+						subset <- merge(subset, censoring, by="Row.Label")
+					}
+				} else {
+					#If no event was selected, we consider everyone to have had the event.
+					subset <- cbind(subset, 1)
+				}
+				colnames(subset)[ncol(subset)] <- "CENSOR"
+			}
+			
+			colnames(subset)[1] <- "TIME"
+			
+		}
+		
+	}
+	
+	return(subset)
+	
 }
