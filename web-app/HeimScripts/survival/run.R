@@ -34,21 +34,38 @@ main <- function(legendPosition = "Right") {
 	}
 	
 	if(nrow(survival_data_2) > 0) {
-		survival_data <- rbind(as.matrix(survival_data_1), as.matrix(survival_data_2))
+		# survival_data <- rbind(as.matrix(survival_data_1), as.matrix(survival_data_2))
+		survival_data <- survival_data_1
 	} else {
 		survival_data <- survival_data_1
 	}
+	
+	subsets <- getSelectedSubsets()
 	
 	output <- 	list(
 					survival_data = survival_data,
 					selected_categories = selected_categories,
 					selectedCategoryCount = selectedCategoryCount,
 					xLabel = xLabel,
+					subsets = subsets,
 					maxTime = 300
 				)
 	
 	toJSON(output)
 	
+}
+
+# Function that extracts the name of the selected Subsets
+# Currently not really working
+getSelectedSubsets <- function() {
+	subsets <- c("")
+	if(!is.null(loaded_variables$time_n0_s1)) {
+		subsets <- c("Subset 1")
+	}
+	if(!is.null(loaded_variables$time_n0_s2)) {
+		subsets <- c(subsets, "Subset 2")
+	}
+	return(subsets)
 }
 
 # Function that extracts the name of the selected Categories

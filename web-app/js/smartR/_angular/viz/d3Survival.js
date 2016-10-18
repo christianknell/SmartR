@@ -30,6 +30,8 @@ window.smartRApp.directive('survivalPlot', [
 		
 		function createSurvivalViz(scope, root) {
 			
+			alert(scope.data.subsets);
+			
 			/* Global Settings */
 			var scopeWidth = parseInt(scope.width); // 1100
 			var scopeHeight = parseInt(scope.height); // 700
