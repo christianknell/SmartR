@@ -3,3 +3,35 @@
 	font-weight: bold;
 	text-anchor: middle;
 }
+
+.tooltip {
+	background-color: #D5D5D5;
+	border-radius: 5px;
+	color: black;
+	padding: 8px;
+}
+
+.axis path,
+.axis line {
+	fill: none;
+	stroke: black;
+}
+
+.tick line {
+	opacity: 0.2;
+}
+
+.display-aside  {
+	float: left;
+	margin: 10px 0 0 0;
+	width: 100%;
+}
+
+.display-aside:last-of-type {
+	margin-bottom: 10px;
+}
+
+.display-aside  .sr-input-area {
+	float: left;
+	margin: 0 25px 0 0;
+}

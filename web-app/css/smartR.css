@@ -158,9 +158,9 @@ div.sr-status-and-output-container:empty:before {
 .heim-input-field h3  {height: 1.7em; font-weight: 100;}
 .heim-input-field label  {display: inline-table;width: 15em;height: 1.7em;}
 .heim-input-field input[type='text']  {display: inline-table;width: 15em; height: 1.5em; padding: 2px;}
-.heim-radiogroup {padding: .5em; border-radius: .5em; background-color: #EEE; border:none; margin: .5em 0 0 .5em; }
-.heim-radiogroup label {display: inline; padding-left: 5px}
-.heim-radiogroup div {display: block; margin-bottom: .5em}
+.heim-radiogroup, .heim-checkboxgroup {padding: .5em; border-radius: .5em; background-color: #EEE; border:none; margin: .5em 0 0 .5em; }
+.heim-radiogroup label, .heim-checkboxgroup label {display: inline; padding-left: 5px}
+.heim-radiogroup div, .heim-checkboxgroup div {display: block; margin-bottom: .5em}
 .heim-input-field-sub {float:left;}
 .heim-input-field-sub h3 {text-decoration: underline; font-weight: 100;}
 .sr-warning-box {
