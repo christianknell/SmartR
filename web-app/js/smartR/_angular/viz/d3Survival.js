@@ -30,8 +30,6 @@ window.smartRApp.directive('survivalPlot', [
 		
 		function createSurvivalViz(scope, root) {
 			
-			alert(scope.data.subsets);
-			
 			/* Global Settings */
 			var scopeWidth = parseInt(scope.width); // 1100
 			var scopeHeight = parseInt(scope.height); // 700
@@ -51,136 +49,29 @@ window.smartRApp.directive('survivalPlot', [
 				'blue',
 				'orange',
 				'black',
-				'blue',
+				'gray',
 				'yellow',
 				'purple'
 			];
 			
 			/* Data */
-			var max = scope.data.maxTime;
+			var max = 0;
 			var min= 10000000000000000000;
-			// var xLabel = smartRUtils.shortenConcept(scope.data.xLabel);
-			var xLabel = scope.data.xLabel;
-			var givenData = {
-				survival_data: [
-					[
-						{t: 0, d: 0, n: 20},
-						{t: 11.267, d: 1, n: 20},
-						{t: 31.2, d: 1, n: 19},
-						{t: 33.167, d: 0, n: 18},
-						{t: 33.367, d: 1, n: 17},
-						{t: 35.667, d: 1, n: 16},
-						{t: 39.033, d: 0, n: 15},
-						{t: 39.3, d: 1, n: 14},
-						{t: 40.067, d: 1, n: 13},
-						{t: 53.867, d: 0, n: 12},
-						{t: 56.7, d: 1, n: 11},
-						{t: 56.9, d: 0, n: 10},
-						{t: 57.7, d: 1, n: 9},
-						{t: 59.4, d: 1, n: 8},
-						{t: 71.3, d: 1, n: 7},
-						{t: 73.333, d: 1, n: 6},
-						{t: 81.967, d: 0, n: 5},
-						{t: 82.367, d: 0, n: 4},
-						{t: 84.867, d: 0, n: 3},
-						{t: 98.667, d: 0, n: 2},
-						{t: 125.9, d: 0, n: 1}
-					],
-					[
-						{t: 0, d: 0, n: 6},
-						{t: 5.767, d: 1, n: 6},
-						{t: 60.733, d: 0, n: 5},
-						{t: 105.9, d: 1, n: 4},
-						{t: 110.067, d: 1, n: 3},
-						{t: 117.367, d: 1, n: 2},
-						{t: 287.967, d: 0, n: 1}
-					],
-					[
-						{t: 0, d: 0, n: 11},
-						{t: 12.7, d: 1, n: 11},
-						{t: 15.4667, d: 1, n: 10},
-						{t: 18.8667, d: 1, n: 9},
-						{t: 33.5333, d: 0, n: 8},
-						{t: 35.4333, d: 0, n: 6},
-						{t: 45.2333, d: 1, n: 5},
-						{t: 48.4333, d: 1, n: 4},
-						{t: 48.8333, d: 0, n: 3},
-						{t: 49.6333, d: 1, n: 2},
-						{t: 66.9667, d: 0, n: 1}
-					],
-					[
-						{t: 0, d: 0, n: 59},
-						{t: 5.7, d: 1, n: 59},
-						{t: 6.533, d: 1, n: 58},
-						{t: 7.2, d: 1, n: 57},
-						{t: 8.7, d: 1, n: 56},
-						{t: 10.267, d: 0, n: 55},
-						{t: 10.533, d: 0, n: 54},
-						{t: 11.9, d: 1, n: 53},
-						{t: 12.167, d: 1, n: 52},
-						{t: 12.467, d: 0, n: 51},
-						{t: 12.9, d: 1, n: 50},
-						{t: 13.1, d: 1, n: 49},
-						{t: 15.1, d: 1, n: 48},
-						{t: 15.167, d: 1, n: 47},
-						{t: 16.2, d: 1, n: 46},
-						{t: 17.167, d: 1, n: 45},
-						{t: 19.8, d: 1, n: 44},
-						{t: 20.433, d: 1, n: 43},
-						{t: 21, d: 1, n: 42},
-						{t: 22.3, d: 1, n: 41},
-						{t: 26.167, d: 1, n: 40},
-						{t: 26.6, d: 1, n: 39},
-						{t: 28.1, d: 1, n: 38},
-						{t: 29.8, d: 1, n: 37},
-						{t: 30.6, d: 1, n: 36},
-						{t: 31.033, d: 1, n: 35},
-						{t: 32.4, d: 1, n: 34},
-						{t: 32.433, d: 1, n: 33},
-						{t: 32.633, d: 1, n: 32},
-						{t: 36.367, d: 1, n: 31},
-						{t: 38.967, d: 1, n: 30},
-						{t: 41.467, d: 1, n: 29},
-						{t: 42.833, d: 1, n: 28},
-						{t: 44.667, d: 1, n: 27},
-						{t: 44.833, d: 1, n: 26},
-						{t: 47.667, d: 0, n: 25},
-						{t: 50.333, d: 1, n: 24},
-						{t: 50.633, d: 1, n: 23},
-						{t: 55.533, d: 1, n: 22},
-						{t: 57.7, d: 1, n: 21},
-						{t: 61.833, d: 1, n: 20},
-						{t: 63.367, d: 1, n: 19},
-						{t: 66.667, d: 1, n: 18},
-						{t: 78.633, d: 1, n: 17},
-						{t: 85.467, d: 1, n: 16},
-						{t: 85.967, d: 1, n: 15},
-						{t: 98.267, d: 1, n: 14},
-						{t: 105.867, d: 0, n: 13},
-						{t: 109.4, d: 1, n: 12},
-						{t: 116.2, d: 0, n: 11},
-						{t: 116.267, d: 1, n: 10},
-						{t: 136.133, d: 0, n: 9},
-						{t: 151.667, d: 1, n: 8},
-						{t: 152.1, d: 0, n: 7},
-						{t: 167.367, d: 1, n: 6},
-						{t: 192.5, d: 1, n: 5},
-						{t: 193.8, d: 1, n: 4},
-						{t: 195.6, d: 0, n: 3},
-						{t: 241.967, d: 1, n: 2},
-						{t: 279.1, d: 1, n: 1}
-					]
-				]
-			};
+			var givenData = scope.data.survival_data;
+			
+			/* Visualization Settings */
+			var xLabel = smartRUtils.shortenConcept(new String(scope.data.x_label));
+			var legendLabels = scope.data.legend_labels;
+			var timeOut = scope.data.time_out;
 			
 			/* Computed Data progression, survival, prob, censored  */
-			for(var a=0; a<givenData.survival_data.length; a++){
-				for (var b=0; b<givenData.survival_data[a].length; b++){
-					var reed = givenData.survival_data[a][b];
-					var brad = (b>0) ? givenData.survival_data[a][b-1].n - reed.d : reed.n;
+			for(var a=0; a<givenData.length; a++){
+				for (var b=0; b<givenData[a].length; b++){
+					var reed = givenData[a][b];
+					var brad = (b>0) ? givenData[a][b-1].n - reed.d : reed.n;
 					reed.progression = reed.d/reed.n;
 					reed.survival = 1 - reed.progression;
-					reed.prob = (b == 0) ? reed.survival : givenData.survival_data[a][b-1].prob*reed.survival;
+					reed.prob = (b == 0) ? reed.survival : givenData[a][b-1].prob*reed.survival;
 					max = (max < reed.t) ? reed.t : max;
 					min = (min < reed.t) ? min : reed.t;
 					reed.censored = (reed.n < brad) ? true : false;
@@ -189,26 +80,41 @@ window.smartRApp.directive('survivalPlot', [
 			
 			/* Begin d3.js */
 				
-				//Scalar functions
-				var x = d3.scale.linear().domain([min, max]).range([0, width]);
-				var y = d3.scale.linear().domain([1, 0]).range([0, height]);
+				// Define domains for the axes
+				var xDomain = [min, max];
+				var yDomain = [1, 0];
 				
-				//Define axses
+				//Scalar functions
+				var x = d3.scale.linear()
+					.range([0, width])
+					.domain(xDomain).nice();
+				var y = d3.scale.linear()
+					.range([0, height])
+					.domain(yDomain);
+				
+				// This chart will display years as integers, and populations with thousands separators
+				var formatY = d3.format(",");
+				var formatX = d3.format(".");
+				
+				//Define axes
 				var xAxis = d3.svg.axis()
 					.scale(x)
-					.tickSize(2)
+					.innerTickSize(-height)
+					.outerTickSize(2)
 					.tickPadding(6)
+					.tickFormat(formatX)
 					.orient("bottom");
 				
 				var yAxis = d3.svg.axis()
 					.scale(y)
-					.tickSize(2)
+					.innerTickSize(-width)
+					.outerTickSize(2)
 					.tickPadding(6)
-					.orient("left");
+					.orient('left');
 				
 				//This is the accessor function
 				var lineFunction = d3.svg.line()
-					.x(function(d) { return x(d.t) + 2*20; })
+					.x(function(d) { return x(d.t); })
 					.y(function(d) { return y(d.prob); })
 					.interpolate("step-before");
 				
@@ -221,16 +127,6 @@ window.smartRApp.directive('survivalPlot', [
 							.append('g')
 							.attr('transform', 'translate(' + 50 + ',' + 0 + ')')
 					
-					/* Draw the lines */
-					for(var a=0; a < givenData.survival_data.length; a++){
-						var line = kaplan.append("path")
-						.attr("d", lineFunction(givenData.survival_data[a]))
-						.attr("stroke", colors[a])
-						.attr("stroke-width", 3)
-						.attr("fill", "none")
-						.attr("opacity", 0.7);
-					}
-					
 					//Draw the x-axis
 					var theXAxis = kaplan.append("g")
 						.attr("class", "x axis")
@@ -241,7 +137,7 @@ window.smartRApp.directive('survivalPlot', [
 					var theXLabel = kaplan.append("text")
 						.attr('class', 'axisLabels')
 						.attr("transform", "translate(" + (width / 2) + " ," + (scopeHeight-margin.bottom) + ")")
-						.text(xLabel);
+						.text(xLabel + " [" + timeOut + "]");
 					
 					//Draw the y-axis
 					var theYAxis = kaplan.append("g")
@@ -257,6 +153,45 @@ window.smartRApp.directive('survivalPlot', [
 						.attr("x",0 - (height / 2))
 						.attr("dy", "1em")
 						.text("Fraction of Patients");
+					
+					// Draw the tooltip-container
+					var hoverDiv = d3.select(root)
+								.append("div")
+								.attr("class", "tooltip")
+								.style("position", "absolute")
+								.style("opacity", 0);
+					
+					// Draw the lines
+					for(var a=0; a < givenData.length; a++){
+						var line = kaplan.append("path")
+							.attr("d", lineFunction(givenData[a]))
+							.attr("stroke", colors[a])
+							.attr("stroke-width", 3)
+							.attr("fill", "none")
+							.attr("opacity", 0.7)
+							.attr('transform', 'translate(' + 0 + ',' + margin.top + ')')
+							.on('mouseover', function () {
+								//on mouseover of each line, give it a nice thick stroke
+								d3.select(this).style("stroke-width", '10px');
+								hoverDiv.html("<b>" + timeOut + " survived:</b> " + d3.format(".1f")(x.invert(d3.mouse(this)[0])) + "<br/><b>probability of survival:</b> " + d3.format(".2%")(y.invert(d3.mouse(this)[1])));
+								hoverDiv.transition()
+										.duration(200)
+										.style("opacity", 0.8)
+										.style("left", (d3.mouse(this)[0]+90) + "px")
+										.style("top", (d3.mouse(this)[1]+310) + "px");
+							})
+							.on("mousemove", function() {
+								hoverDiv.html("<b>" + timeOut + " survived:</b> " + d3.format(".1f")(x.invert(d3.mouse(this)[0])) + "<br/><b>probability of survival:</b> " + d3.format(".2%")(y.invert(d3.mouse(this)[1])));
+								hoverDiv.style("left", (d3.mouse(this)[0]+90) + "px")
+										.style("top", (d3.mouse(this)[1]+310) + "px");
+							})
+							.on('mouseout', function () {
+								d3.select(this).style("stroke-width", "3px");
+								hoverDiv.transition()
+										.duration(500)
+										.style("opacity", 0);
+							});
+					}
 				
 				/* Drawing ends here */
 				
