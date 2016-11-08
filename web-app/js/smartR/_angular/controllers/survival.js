@@ -24,10 +24,17 @@ window.smartRApp.controller('SurvivalController', [
 		$scope.runAnalysis = {
 			disabled: true,
 			running: false,
-			scriptResults: {},
 			params: {
-				legendPosition: 'right'
-			}
+				legendPosition: 'right',
+				timeIn: 'days',
+				timeOut: 'days',
+				mergeSubsets: 'FALSE',
+				mergeCategories: 'FALSE'
+			},
+			download: {
+				disabled: true,
+			},
+			scriptResults: {}
 		};
 		
 		$scope.$watchGroup(['fetch.running', 'runAnalysis.running'],
@@ -43,6 +50,9 @@ window.smartRApp.controller('SurvivalController', [
 				// disable tabs when certain criteria are not met
 				$scope.fetch.disabled = runAnalysisRunning;
 				$scope.runAnalysis.disabled = fetchRunning || !$scope.fetch.loaded;
+				
+				// disable buttons when certain criteria are not met
+				$scope.runAnalysis.download.disabled = runAnalysisRunning || $.isEmptyObject($scope.runAnalysis.scriptResults);
 			}
 		);
 		
