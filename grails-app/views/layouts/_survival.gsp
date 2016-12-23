@@ -17,6 +17,7 @@
 				<concept-box style="display: inline-block;"
 							 concept-group="fetch.conceptBoxes.category"
 							 type="LD-categorical"
+							 id="categories"
 							 min="0"
 							 max="4"
 							 label="Category (optional)"
@@ -25,6 +26,7 @@
 				<concept-box style="display: inline-block;"
 							 concept-group="fetch.conceptBoxes.censoring"
 							 type="LD-categorical"
+							 id="censoring"
 							 min="0"
 							 max="1"
 							 label="Censoring Variable (optional)"
@@ -39,24 +41,23 @@
 			</workflow-tab>
 			
 			<workflow-tab tab-name="Run Analysis" disabled="runAnalysis.disabled">
-				<div class="heim-input-field sr-input-area">
-					<h2>Legend Position (no functionality yet) <i class="ui-icon ui-icon-info sr-tooltip-dialog" title="Defines the location the legend will be displayed."></i></h2>
-					<fieldset class="heim-radiogroup">
-						<label>
-							<input type="radio" ng-model="runAnalysis.params.legendPosition" value="top"> Top
-						</label>
-						<label>
-							<input type="radio" ng-model="runAnalysis.params.legendPosition" value="right" checked> Right
-						</label>
-						<label>
-							<input type="radio" ng-model="runAnalysis.params.legendPosition" value="bottom"> Bottom
-						</label>
-						<label>
-							<input type="radio" ng-model="runAnalysis.params.legendPosition" value="left"> Left
-						</label>
-					</fieldset>
-				</div>
 				<div class="display-aside">
+					<div class="heim-input-field sr-input-area">
+						<h2>Plot Width <i class="ui-icon ui-icon-info sr-tooltip-dialog" title="Defines the Width of the survival plot."></i></h2>
+						<fieldset class="heim-radiogroup">
+							<label>
+								<input type="number" ng-model="runAnalysis.params.plotWidth" value="800" min="350" max="900">
+							</label>
+						</fieldset>
+					</div>
+					<div class="heim-input-field sr-input-area">
+						<h2>Plot Height <i class="ui-icon ui-icon-info sr-tooltip-dialog" title="Defines the Height of the survival plot."></i></h2>
+						<fieldset class="heim-radiogroup">
+							<label>
+								<input type="number" ng-model="runAnalysis.params.plotHeight" value="500" min="350" max="600">
+							</label>
+						</fieldset>
+					</div>
 					<div class="heim-input-field sr-input-area">
 						<h2>Time in <i class="ui-icon ui-icon-info sr-tooltip-dialog" title="Defines the domain the survival time data is given in."></i></h2>
 						<fieldset class="heim-radiogroup">
@@ -88,8 +89,43 @@
 				</div>
 				<div class="display-aside">
 					<div class="heim-input-field sr-input-area">
-						<h2>Merge Subsets <i class="ui-icon ui-icon-info sr-tooltip-dialog" title="Merges the selected subsets by the selected categories. Results in one graph per category."></i></h2>
+						<h2>Legend Type <i class="ui-icon ui-icon-info sr-tooltip-dialog" title="Defines if the legend will be displayed inside or outside of the plot."></i></h2>
 						<fieldset class="heim-radiogroup">
+							<label>
+								<input type="radio" ng-model="runAnalysis.params.legendType" value="inner" checked> Inner
+							</label>
+							<label>
+								<input type="radio" ng-model="runAnalysis.params.legendType" value="outer"> Outer
+							</label>
+						</fieldset>
+					</div>
+					<div class="heim-input-field sr-input-area">
+						<h2>Legend Position <i class="ui-icon ui-icon-info sr-tooltip-dialog" title="Defines the location the legend will be displayed."></i></h2>
+						<fieldset class="heim-radiogroup">
+							<label>
+								<input type="radio" ng-model="runAnalysis.params.legendPosition" value="bottom" checked> Bottom
+							</label>
+							<label>
+								<input type="radio" ng-model="runAnalysis.params.legendPosition" value="top"> Top
+							</label>
+						</fieldset>
+					</div>
+					<div class="heim-input-field sr-input-area">
+						<h2>Show Risk Table <i class="ui-icon ui-icon-info sr-tooltip-dialog" title="Defines if the risk table will be displayed."></i></h2>
+						<fieldset class="heim-radiogroup">
+							<label>
+								<input type="radio" ng-model="runAnalysis.params.showRiskTable" value="TRUE" checked> True
+							</label>
+							<label>
+								<input type="radio" ng-model="runAnalysis.params.showRiskTable" value="FALSE"> False
+							</label>
+						</fieldset>
+					</div>
+				</div>
+				<div class="display-aside">
+					<div class="heim-input-field sr-input-area">
+						<h2>Merge Subsets <i class="ui-icon ui-icon-info sr-tooltip-dialog" title="Merges the selected subsets by the selected categories. Results in one graph per category."></i></h2>
+						<fieldset class="heim-radiogroup" ng-disabled="common.subsets < 2">
 							<label>
 								<input type="radio" ng-model="runAnalysis.params.mergeSubsets" value="FALSE" checked> False
 							</label>
@@ -100,12 +136,23 @@
 					</div>
 					<div class="heim-input-field sr-input-area">
 						<h2>Merge Categories  <i class="ui-icon ui-icon-info sr-tooltip-dialog" title="Merges the selected categories. Results in one graph per subset."></i></h2>
-						<fieldset class="heim-radiogroup">
+						<fieldset class="heim-radiogroup" ng-disabled="common.categories < 2">
 							<label>
 								<input type="radio" ng-model="runAnalysis.params.mergeCategories" value="FALSE" checked> False
 							</label>
 							<label>
 								<input type="radio" ng-model="runAnalysis.params.mergeCategories" value="TRUE"> True
+							</label>
+						</fieldset>
+					</div>
+					<div class="heim-input-field sr-input-area">
+						<h2>Censor Interpretation  <i class="ui-icon ui-icon-info sr-tooltip-dialog" title="Defines the interpretation of the specified censoring event."></i></h2>
+						<fieldset class="heim-radiogroup" ng-disabled="common.censoring < 1">
+							<label>
+								<input type="radio" ng-model="runAnalysis.params.censorInterpretation" value="negative" checked> Event is 1
+							</label>
+							<label>
+								<input type="radio" ng-model="runAnalysis.params.censorInterpretation" value="positive"> Event is 0
 							</label>
 						</fieldset>
 					</div>
@@ -120,7 +167,7 @@
 				<capture-plot-button filename="survivalplot.svg" disabled="runAnalysis.download.disabled" target="survival-plot"></capture-plot-button>
 				<br/>
 				<br/>
-				<survival-plot data="runAnalysis.scriptResults" width="1100" height="700"></survival-plot>
+				<survival-plot data="runAnalysis.scriptResults" width="1000" height="700"></survival-plot>
 			</workflow-tab>
 			
 		</tab-container>

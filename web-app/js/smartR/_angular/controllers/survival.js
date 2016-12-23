@@ -21,15 +21,25 @@ window.smartRApp.controller('SurvivalController', [
 			}
 		};
 		
+		$scope.common = {
+			subsets: 0,
+			categories: 0
+		};
+		
 		$scope.runAnalysis = {
 			disabled: true,
 			running: false,
 			params: {
-				legendPosition: 'right',
+				plotWidth: '800',
+				plotHeight: '500',
 				timeIn: 'days',
 				timeOut: 'days',
+				legendType: 'inner',
+				legendPosition: 'bottom',
+				showRiskTable: 'TRUE',
 				mergeSubsets: 'FALSE',
-				mergeCategories: 'FALSE'
+				mergeCategories: 'FALSE',
+				censorInterpretation: 'negative'
 			},
 			download: {
 				disabled: true,
@@ -45,6 +55,9 @@ window.smartRApp.controller('SurvivalController', [
 				// clear old results
 				if (fetchRunning) {
 					$scope.runAnalysis.scriptResults = {};
+					$scope.common.subsets = smartRUtils.countCohorts();
+					$scope.common.categories = countCategories();
+					$scope.common.censoring = countCensoring();
 				}
 				
 				// disable tabs when certain criteria are not met
@@ -57,3 +70,12 @@ window.smartRApp.controller('SurvivalController', [
 		);
 		
 	}]);
+	
+	
+function countCategories() {
+	return document.querySelectorAll('#categories .conceptUnselected').length;
+}
+
+function countCensoring() {
+	return document.querySelectorAll('#censoring .conceptUnselected').length;
+}
