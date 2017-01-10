@@ -383,11 +383,13 @@ window.smartRApp.directive('survivalPlot', [
 							}
 							
 							for(var i = 0; i < tickCountX; i++) {
+								
 								var currentTimeTick = (maxXValue / tickCountX) * i;
 								var nextTimeTick = (maxXValue / tickCountX) * (i + 1);
 								if(nextTimeTick > maxXValue) {
 									nextTimeTick = currentTimeTick;
 								}
+								
 								for(var j = 0; j < survivalData.length; j++) {
 									var survivalDataFound = false;
 									// FIRST TICK
@@ -395,9 +397,17 @@ window.smartRApp.directive('survivalPlot', [
 										riskTableData[j][i] = survivalData[j][0]["n"];
 									} else {
 										for(var k = lastIndex[j]; k < survivalData[j].length; k++) {
-											lastIndex[j] = k-1;
+											if(k > 0) {
+												lastIndex[j] = k-1;
+											} else {
+												k = 0;
+											}
 											if(survivalData[j][k]["t"] > currentTimeTick) {
-												riskTableData[j][i] = survivalData[j][k-1]["n"] - survivalData[j][k-1]["d"];
+												if(k > 0) {
+													riskTableData[j][i] = survivalData[j][k-1]["n"] - survivalData[j][k-1]["d"];
+												} else {
+													riskTableData[j][i] = survivalData[j][k]["n"] - survivalData[j][k]["d"];
+												}
 												survivalDataFound = true;
 												break;
 											}
@@ -406,7 +416,6 @@ window.smartRApp.directive('survivalPlot', [
 											riskTableData[j][i] = survivalData[j][survivalData[j].length-1]["n"] - survivalData[j][survivalData[j].length-1]["d"];
 										}
 									}
-									
 								}
 							}
 							
@@ -446,7 +455,7 @@ window.smartRApp.directive('survivalPlot', [
 							var selected_subsets = scope.data.selected_subsets;
 							var statistics1 = scope.data.statistics1;
 							var header_statistics1 = [""];
-							for(var i = 0; i < Object.keys(statistics1[0]).length - 1; i++) {
+							for(var i = 0; i < selected_subsets.length; i++) {
 								header_statistics1.push(selected_subsets[i]);
 							}
 							

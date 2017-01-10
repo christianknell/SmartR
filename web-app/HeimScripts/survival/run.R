@@ -55,13 +55,13 @@ main <- function(plotWidth = "800", plotHeight = "500", timeIn = "days", timeOut
 	
 	# Subset 1
 	getSubsetData(1)
-	log1 <- file("subset_1.log")
-	write.table(subset_1, log1, sep="\t", na="", row.names=FALSE)
+	#log1 <- file("subset_1.log")
+	#write.table(subset_1, log1, sep="\t", na="", row.names=FALSE)
 	
 	# Subset 2
 	getSubsetData(2)
-	log2 <- file("subset_2.log")
-	write.table(subset_2, log2, sep="\t", na="", row.names=FALSE)
+	#log2 <- file("subset_2.log")
+	#write.table(subset_2, log2, sep="\t", na="", row.names=FALSE)
 	
 	# Convert TimeMeasurement of the previously defined subsets
 	convertDataSetsTimeMeasurement(timeIn, timeOut)
@@ -457,9 +457,13 @@ generateDataSets <- function(mergeSubsets, mergeCategories) {
 generateSurvivalData <- function() {
 	
 	for(data_set in data_sets) {
-		survival_fit_data = survfit(Surv(data_set$TIME, data_set$CENSOR)~1)
-		survival_data <- data.frame(survival_fit_data$time, survival_fit_data$n.risk, survival_fit_data$n.event)
-		colnames(survival_data) <- c("t", "n", "d")
+		if(length(data_set$TIME)>0) {
+			survival_fit_data = survfit(Surv(data_set$TIME, data_set$CENSOR)~1)
+			survival_data <- data.frame(survival_fit_data$time, survival_fit_data$n.risk, survival_fit_data$n.event)
+			colnames(survival_data) <- c("t", "n", "d")
+		} else {
+			survival_data <- data.frame(t=0, n=0, d=0)
+		}
 		survival_data_sets[[length(survival_data_sets)+1]] <<- survival_data
 	}
 	
@@ -573,29 +577,33 @@ generateCoxRegressionData <- function(mergeSubsets, mergeCategories) {
 				category <- loaded_variables$category_n0_s1
 				subset_1_data_set <- merge(subset_1_data_set, category, by="Row.Label")
 				colnames(subset_1_data_set)[4] <- "CATEGORY_1"
+				subset_1_data_set$CATEGORY_1[is.na(subset_1_data_set$CATEGORY_1)] <- ""
 			}
 			# Subset 1 && Category 2
 			if(!is.null(loaded_variables$category_n1_s1)) {
 				category <- loaded_variables$category_n1_s1
 				subset_1_data_set <- merge(subset_1_data_set, category, by="Row.Label")
 				colnames(subset_1_data_set)[5] <- "CATEGORY_2"
+				subset_1_data_set$CATEGORY_2[is.na(subset_1_data_set$CATEGORY_2)] <- ""
 			}
 			# Subset 1 && Category 3
 			if(!is.null(loaded_variables$category_n2_s1)) {
 				category <- loaded_variables$category_n2_s1
 				subset_1_data_set <- merge(subset_1_data_set, category, by="Row.Label")
 				colnames(subset_1_data_set)[6] <- "CATEGORY_3"
+				subset_1_data_set$CATEGORY_3[is.na(subset_1_data_set$CATEGORY_3)] <- ""
 			}
 			# Subset 1 && Category 4
 			if(!is.null(loaded_variables$category_n3_s1)) {
 				category <- loaded_variables$category_n3_s1
 				subset_1_data_set <- merge(subset_1_data_set, category, by="Row.Label")
 				colnames(subset_1_data_set)[7] <- "CATEGORY_4"
+				subset_1_data_set$CATEGORY_4[is.na(subset_1_data_set$CATEGORY_4)] <- ""
 			}
 			cox_regression_data_sets[[length(cox_regression_data_sets)+1]] <<- subset_1_data_set
 		}
 		
-		# Subset 2 
+		# Subset 2
 		if(nrow(subset_2) > 0) {
 			subset_2_data_set <- subset_2
 			# Subset 2 && Category 1
@@ -603,24 +611,28 @@ generateCoxRegressionData <- function(mergeSubsets, mergeCategories) {
 				category <- loaded_variables$category_n0_s2
 				subset_2_data_set <- merge(subset_2_data_set, category, by="Row.Label")
 				colnames(subset_2_data_set)[4] <- "CATEGORY_1"
+				subset_2_data_set$CATEGORY_1[is.na(subset_2_data_set$CATEGORY_1)] <- ""
 			}
 			# Subset 2 && Category 2
 			if(!is.null(loaded_variables$category_n1_s2)) {
 				category <- loaded_variables$category_n1_s2
 				subset_2_data_set <- merge(subset_2_data_set, category, by="Row.Label")
 				colnames(subset_2_data_set)[5] <- "CATEGORY_2"
+				subset_2_data_set$CATEGORY_2[is.na(subset_2_data_set$CATEGORY_2)] <- ""
 			}
 			# Subset 2 && Category 3
 			if(!is.null(loaded_variables$category_n2_s2)) {
 				category <- loaded_variables$category_n2_s2
 				subset_2_data_set <- merge(subset_2_data_set, category, by="Row.Label")
 				colnames(subset_2_data_set)[6] <- "CATEGORY_3"
+				subset_2_data_set$CATEGORY_3[is.na(subset_2_data_set$CATEGORY_3)] <- ""
 			}
 			# Subset 2 && Category 4
 			if(!is.null(loaded_variables$category_n3_s2)) {
 				category <- loaded_variables$category_n3_s2
 				subset_2_data_set <- merge(subset_2_data_set, category, by="Row.Label")
 				colnames(subset_2_data_set)[7] <- "CATEGORY_4"
+				subset_2_data_set$CATEGORY_4[is.na(subset_2_data_set$CATEGORY_4)] <- ""
 			}
 			cox_regression_data_sets[[length(cox_regression_data_sets)+1]] <<- subset_2_data_set
 		}
@@ -663,25 +675,133 @@ generateCoxRegressionResults <- function(mergeSubsets, mergeCategories) {
 		cox <- data.frame()
 		
 		if(mergeCategories) {
-			cox <- summary(coxph(Surv(cox_regression_data_set$TIME, cox_regression_data_set$CENSOR) ~ cox_regression_data_set$CATEGORY, method="efron", robust="F"))
+			cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY, data=cox_regression_data_set, method="efron", robust="F"))
 		} else {
-			switch(selected_categories_count,
-				'0' = {
-					cox <- summary(coxph(Surv(cox_regression_data_set$TIME, cox_regression_data_set$CENSOR) ~ cox_regression_data_set$CATEGORY, method="efron", robust="F"))
-				},
-				'1' = {
-					cox <- summary(coxph(Surv(cox_regression_data_set$TIME, cox_regression_data_set$CENSOR) ~ cox_regression_data_set$CATEGORY_1, method="efron", robust="F"))
-				},
-				'2' = {
-					cox <- summary(coxph(Surv(cox_regression_data_set$TIME, cox_regression_data_set$CENSOR) ~ cox_regression_data_set$CATEGORY_1 + cox_regression_data_set$CATEGORY_2, method="efron", robust="F"))
-				},
-				'3' = {
-					cox <- summary(coxph(Surv(cox_regression_data_set$TIME, cox_regression_data_set$CENSOR) ~ cox_regression_data_set$CATEGORY_1 + cox_regression_data_set$CATEGORY_2 + cox_regression_data_set$CATEGORY_3, method="efron", robust="F"))
-				},
-				'4' = {
-					cox <- summary(coxph(Surv(cox_regression_data_set$TIME, cox_regression_data_set$CENSOR) ~ cox_regression_data_set$CATEGORY_1 + cox_regression_data_set$CATEGORY_2 + cox_regression_data_set$CATEGORY_3 + cox_regression_data_set$CATEGORY_4, method="efron", robust="F"))
+			if(selected_categories_count == 0) {
+				cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY, data=cox_regression_data_set, method="efron", robust="F"))
+			}
+			if(selected_categories_count == 1) {
+				classList <- as.vector(gsub("\\s","_",gsub("^\\s+|\\s+$", "",(cox_regression_data_set$CATEGORY_1))))
+				#1
+				if(length(unique(classList)) > 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_1, data=cox_regression_data_set, method="efron", robust="F"))
 				}
-			)
+			}
+			if(selected_categories_count == 2) {
+				classList1 <- as.vector(gsub("\\s","_",gsub("^\\s+|\\s+$", "",(cox_regression_data_set$CATEGORY_1))))
+				classList2 <- as.vector(gsub("\\s","_",gsub("^\\s+|\\s+$", "",(cox_regression_data_set$CATEGORY_2))))
+				#11
+				if(length(unique(classList1)) > 1 && length(unique(classList2)) > 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_1 + CATEGORY_2, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#10
+				if(length(unique(classList1)) > 1 && length(unique(classList2)) <= 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_1, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#01
+				if(length(unique(classList1)) <= 1 && length(unique(classList2)) > 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_2, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+			}
+			if(selected_categories_count == 3) {
+				classList1 <- as.vector(gsub("\\s","_",gsub("^\\s+|\\s+$", "",(cox_regression_data_set$CATEGORY_1))))
+				classList2 <- as.vector(gsub("\\s","_",gsub("^\\s+|\\s+$", "",(cox_regression_data_set$CATEGORY_2))))
+				classList3 <- as.vector(gsub("\\s","_",gsub("^\\s+|\\s+$", "",(cox_regression_data_set$CATEGORY_3))))
+				#111
+				if(length(unique(classList1)) > 1 && length(unique(classList2)) > 1 && length(unique(classList3)) > 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_1 + CATEGORY_2 + CATEGORY_3, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#110
+				if(length(unique(classList1)) > 1 && length(unique(classList2)) > 1 && length(unique(classList3)) <= 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_1 + CATEGORY_2, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#101
+				if(length(unique(classList1)) > 1 && length(unique(classList2)) <= 1 && length(unique(classList3)) > 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_1 + CATEGORY_3, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#100
+				if(length(unique(classList1)) > 1 && length(unique(classList2)) <= 1 && length(unique(classList3)) <= 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_1, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#011
+				if(length(unique(classList1)) <= 1 && length(unique(classList2)) > 1 && length(unique(classList3)) > 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_2 + CATEGORY_3, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#010
+				if(length(unique(classList1)) <= 1 && length(unique(classList2)) > 1 && length(unique(classList3)) <= 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_2, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#001
+				if(length(unique(classList1)) <= 1 && length(unique(classList2)) <= 1 && length(unique(classList3)) > 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_3, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+			}
+			if(selected_categories_count == 4) {
+				classList1 <- as.vector(gsub("\\s","_",gsub("^\\s+|\\s+$", "",(cox_regression_data_set$CATEGORY_1))))
+				classList2 <- as.vector(gsub("\\s","_",gsub("^\\s+|\\s+$", "",(cox_regression_data_set$CATEGORY_2))))
+				classList3 <- as.vector(gsub("\\s","_",gsub("^\\s+|\\s+$", "",(cox_regression_data_set$CATEGORY_3))))
+				classList4 <- as.vector(gsub("\\s","_",gsub("^\\s+|\\s+$", "",(cox_regression_data_set$CATEGORY_4))))
+				#1111
+				if(length(unique(classList1)) > 1 && length(unique(classList2)) > 1 && length(unique(classList3)) > 1 && length(unique(classList4)) > 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_1 + CATEGORY_2 + CATEGORY_3 + CATEGORY_4, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#1110
+				if(length(unique(classList1)) > 1 && length(unique(classList2)) > 1 && length(unique(classList3)) > 1 && length(unique(classList4)) <= 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_1 + CATEGORY_2 + CATEGORY_3, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#1101
+				if(length(unique(classList1)) > 1 && length(unique(classList2)) > 1 && length(unique(classList3)) <= 1 && length(unique(classList4)) > 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_1 + CATEGORY_2 + CATEGORY_4, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#1100
+				if(length(unique(classList1)) > 1 && length(unique(classList2)) > 1 && length(unique(classList3)) <= 1 && length(unique(classList4)) <= 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_1 + CATEGORY_2, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#1011
+				if(length(unique(classList1)) > 1 && length(unique(classList2)) <= 1 && length(unique(classList3)) > 1 && length(unique(classList4)) > 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_1 + CATEGORY_3 + CATEGORY_4, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#1010
+				if(length(unique(classList1)) > 1 && length(unique(classList2)) <= 1 && length(unique(classList3)) > 1 && length(unique(classList4)) <= 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_1 + CATEGORY_3, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#1001
+				if(length(unique(classList1)) > 1 && length(unique(classList2)) <= 1 && length(unique(classList3)) <= 1 && length(unique(classList4)) > 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_1 + CATEGORY_4, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#1000
+				if(length(unique(classList1)) > 1 && length(unique(classList2)) <= 1 && length(unique(classList3)) <= 1 && length(unique(classList4)) <= 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_1, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#0111
+				if(length(unique(classList1)) <= 1 && length(unique(classList2)) > 1 && length(unique(classList3)) > 1 && length(unique(classList4)) > 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_2 + CATEGORY_3 + CATEGORY_4, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#0110
+				if(length(unique(classList1)) <= 1 && length(unique(classList2)) > 1 && length(unique(classList3)) > 1 && length(unique(classList4)) <= 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_2 + CATEGORY_3, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#0101
+				if(length(unique(classList1)) <= 1 && length(unique(classList2)) > 1 && length(unique(classList3)) <= 1 && length(unique(classList4)) > 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_2 + CATEGORY_4, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#0100
+				if(length(unique(classList1)) <= 1 && length(unique(classList2)) > 1 && length(unique(classList3)) <= 1 && length(unique(classList4)) <= 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_2, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#0011
+				if(length(unique(classList1)) <= 1 && length(unique(classList2)) <= 1 && length(unique(classList3)) > 1 && length(unique(classList4)) > 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_3 + CATEGORY_4, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#0010
+				if(length(unique(classList1)) <= 1 && length(unique(classList2)) <= 1 && length(unique(classList3)) > 1 && length(unique(classList4)) <= 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~  CATEGORY_3, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+				#0001
+				if(length(unique(classList1)) <= 1 && length(unique(classList2)) <= 1 && length(unique(classList3)) <= 1 && length(unique(classList4)) > 1) {
+					cox <- summary(coxph(Surv(TIME, CENSOR) ~ CATEGORY_4, data=cox_regression_data_set, method="efron", robust="F"))
+				}
+			}
 		}
 		
 		# RESULTS FOR TABLE 1
@@ -706,7 +826,6 @@ generateCoxRegressionResults <- function(mergeSubsets, mergeCategories) {
 		score = paste(paste(paste(paste(toString(signif(as.numeric(score[1]), digits=4)), " on ", sep=""), toString(signif(as.numeric(score[2]), digits=4)), sep=""), " df, p=", sep=""), toString(signif(as.numeric(score[3]), digits=4)), sep="")
 		
 		sub_result_1 <- c(number_of_subjects, number_of_events, concordance, rsq, likelihood, waldtest, score)
-		write.table(sub_result_1, "sub_result_1.log")
 		if(current_subset==1) {
 			cox_regression_result_1[["SUB_1"]] = sub_result_1
 		} else {
