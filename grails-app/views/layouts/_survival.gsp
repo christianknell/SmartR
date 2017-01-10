@@ -59,7 +59,7 @@
 						</fieldset>
 					</div>
 					<div class="heim-input-field sr-input-area">
-						<h2>Time in <i class="ui-icon ui-icon-info sr-tooltip-dialog" title="Defines the domain the survival time data is given in."></i></h2>
+						<h2>Time in <i class="ui-icon ui-icon-info sr-tooltip-dialog" title="Defines the domain the data is given in."></i></h2>
 						<fieldset class="heim-radiogroup">
 							<label>
 								<input type="radio" ng-model="runAnalysis.params.timeIn" value="days" checked> Days
@@ -73,7 +73,7 @@
 						</fieldset>
 					</div>
 					<div class="heim-input-field sr-input-area">
-						<h2>Time out <i class="ui-icon ui-icon-info sr-tooltip-dialog" title="Defines the domain the survival time data should be displayed in the graph."></i></h2>
+						<h2>Time out <i class="ui-icon ui-icon-info sr-tooltip-dialog" title="Defines the domain the data should be displayed in the graph."></i></h2>
 						<fieldset class="heim-radiogroup">
 							<label>
 								<input type="radio" ng-model="runAnalysis.params.timeOut" value="days" checked> Days
